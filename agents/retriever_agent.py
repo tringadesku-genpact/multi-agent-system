@@ -3,11 +3,28 @@ from agents.rag_retrieve import retrieve_notes
 
 
 def run(state: AgentState) -> AgentState:
-    query = state["retrieval_query"]
-    top_k = state.get("top_k", 5)
+    query = (state.get("retrieval_query") or "").strip()
+    top_k = int(state.get("top_k", 5))
+
+    if not query:
+        state["notes"] = []
+        add_trace(
+            state,
+            agent="retriever",
+            action="retrieve",
+            detail="Empty retrieval query; returned 0 notes",
+            meta={"query": query, "top_k": top_k, "notes": 0},
+        )
+        return state
 
     notes = retrieve_notes(query=query, top_k=top_k)
     state["notes"] = notes
+
+    #compact source list
+    state["source_refs"] = [
+        f'{n["citation"]["source_file"]} | page {n["citation"]["page"]} | chunk {n["citation"]["chunk_in_page"]}'
+        for n in notes
+    ]
 
     add_trace(
         state,

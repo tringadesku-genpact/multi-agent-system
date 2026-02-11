@@ -4,6 +4,7 @@ from agents.state import AgentState, add_trace
 from agents.planner_agent import run as planner_run
 from agents.retriever_agent import run as retriever_run
 from agents.writer_agent import run as writer_run
+from agents.verifier_agent import run as verifier_run
 
 
 def planner_node(state: AgentState) -> AgentState:
@@ -18,17 +19,31 @@ def writer_node(state: AgentState) -> AgentState:
     return writer_run(state)
 
 
+def verifier_node(state: AgentState) -> AgentState:
+    return verifier_run(state)
+
+
+def _route_after_verifier(state: AgentState):
+    # If verifier requests retry, go back to retriever; else finish.
+    return "retriever" if state.get("needs_retry") else END
+
+
 def build_graph():
     graph = StateGraph(AgentState)
 
     graph.add_node("planner", planner_node)
     graph.add_node("retriever", retriever_node)
     graph.add_node("writer", writer_node)
+    graph.add_node("verifier", verifier_node)
 
     graph.set_entry_point("planner")
+
     graph.add_edge("planner", "retriever")
     graph.add_edge("retriever", "writer")
-    graph.add_edge("writer", END)
+    graph.add_edge("writer", "verifier")
+
+    # conditional edge (loop once if needed)
+    graph.add_conditional_edges("verifier", _route_after_verifier, ["retriever", END])
 
     return graph.compile()
 
@@ -39,6 +54,8 @@ def run(task: str, top_k: int = 5) -> AgentState:
         "task": task,
         "top_k": top_k,
         "trace": [],
+        "retried": False,
+        "needs_retry": False,
     }
     add_trace(state, "system", "start", "Starting LangGraph run")
     out = app.invoke(state)

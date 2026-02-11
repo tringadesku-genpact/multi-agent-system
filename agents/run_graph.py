@@ -9,7 +9,7 @@ def main():
     out = run(task=task, top_k=5)
 
     print("\n=== DRAFT ===\n")
-    print(out.get("draft", ""))
+    print(out.get("final") or out.get("draft", ""))
 
     print("\n=== TRACE ===")
     for e in out.get("trace", []):

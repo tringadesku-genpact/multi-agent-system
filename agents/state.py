@@ -36,6 +36,9 @@ class AgentState(TypedDict, total=False):
     # logs
     trace: List[TraceEvent]
 
+    # --- ADDED ---
+    stop: bool
+
 
 def add_trace(state: AgentState, agent: str, action: str, detail: str = "", meta=None) -> None:
     if meta is None:

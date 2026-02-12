@@ -2,6 +2,20 @@ import re
 from agents.state import AgentState, add_trace
 from agents.query_rewriter_agent import run as rewrite_query
 
+SECRET_PATTERNS = [
+    r"OPENAI_API_KEY\s*=\s*\S+",
+    r"sk-[A-Za-z0-9]{20,}",
+]
+
+def _redact_secrets(text: str) -> str:
+    if not text:
+        return text
+    redacted = text
+    for p in SECRET_PATTERNS:
+        redacted = re.sub(p, "[REDACTED]", redacted)
+    return redacted
+
+
 CITATION_RE = re.compile(r"\[(\d+)\]")
 
 
@@ -53,13 +67,12 @@ def _is_generic_conclusion(p: str) -> bool:
 def _needs_citation(p: str) -> bool:
     """
     Decide if this paragraph should require a citation.
-    We skip headings and generic conclusions.
+    We skip headings, generic conclusions, and very short connector paragraphs.
     """
     if _is_heading(p):
         return False
     if _is_generic_conclusion(p) and len(p.split()) < 30:
         return False
-    # very short "connector" paragraphs shouldn't force citations
     if len(p.split()) < 8:
         return False
     return True
@@ -67,6 +80,19 @@ def _needs_citation(p: str) -> bool:
 
 def run(state: AgentState) -> AgentState:
     draft = state.get("draft", "")
+
+    # --- Output guardrail: redact secrets before anything else ---
+    redacted = _redact_secrets(draft)
+    if redacted != draft:
+        add_trace(
+            state,
+            "verifier",
+            "redacted_secrets",
+            "Redacted secret-like patterns from draft",
+        )
+    draft = redacted
+    state["draft"] = draft  # ensure downstream uses redacted version
+
     notes = state.get("notes", [])
     max_n = len(notes)
 
@@ -79,7 +105,6 @@ def run(state: AgentState) -> AgentState:
     body, sources_appendix = _split_body_and_sources(draft)
     paras = _paragraphs(body)
 
-    # Missing citations only counted for paragraphs that NEED citations
     missing_citation = [
         p for p in paras
         if _needs_citation(p)
@@ -87,8 +112,6 @@ def run(state: AgentState) -> AgentState:
         and (not _has_citation(p))
     ]
 
-    # Citation numbering validity can be checked on full text (body + sources),
-    # but the key risk is body. We'll validate the whole draft for safety.
     citations_ok = _citations_in_range(draft, max_n) if max_n > 0 else False
 
     add_trace(
@@ -110,7 +133,6 @@ def run(state: AgentState) -> AgentState:
         state["retried"] = True
         state["needs_retry"] = True
 
-        # Rewrite query using the query rewriter agent (LLM)
         rewrite_query(state)
 
         add_trace(
@@ -126,7 +148,6 @@ def run(state: AgentState) -> AgentState:
     state["final"] = draft
     state["needs_retry"] = False
 
-    # If still missing citations after retry, keep transparency
     if missing_citation:
         add_trace(
             state,

@@ -8,7 +8,7 @@ def run(state: AgentState) -> AgentState:
 
     if not query:
         state["notes"] = []
-        state["sources"] = []
+        # state["sources"] = []
         add_trace(
             state,
             agent="retriever",
@@ -18,8 +18,24 @@ def run(state: AgentState) -> AgentState:
         )
         return state
 
+    MIN_SCORE = 0.60  
     notes = retrieve_notes(query=query, top_k=top_k)
+    # keep only relevant notes
+    notes = [n for n in notes if float(n.get("score", 0) or 0) >= MIN_SCORE]
     state["notes"] = notes
+
+    if not notes:
+        state["final"] = "Not found in the sources."
+        state["stop"] = True
+        add_trace(
+            state,
+            agent="retriever",
+            action="no_evidence",
+            detail="No relevant sources after score threshold; stopping",
+            meta={"query": query, "top_k": top_k, "min_score": MIN_SCORE},
+        )
+        return state
+
 
     # structured sources
     source_refs = []
@@ -35,7 +51,7 @@ def run(state: AgentState) -> AgentState:
             }
         )
 
-    state["sources"] = source_refs
+    # state["sources"] = source_refs
 
     add_trace(
         state,

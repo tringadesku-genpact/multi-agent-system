@@ -41,6 +41,9 @@ def _route_after_verifier(state: AgentState):
     # If verifier requests retry, go back to retriever; else finish.
     return "retriever" if state.get("needs_retry") else END
 
+def _route_after_retriever(state: AgentState):
+    return END if state.get("stop") else "writer"
+
 
 def build_graph():
     graph = StateGraph(AgentState)
@@ -57,7 +60,7 @@ def build_graph():
     graph.add_conditional_edges("guardrails", _route_after_guardrails, ["planner", END])
 
     graph.add_edge("planner", "retriever")
-    graph.add_edge("retriever", "writer")
+    graph.add_conditional_edges("retriever", _route_after_retriever, ["writer", END])
     graph.add_edge("writer", "verifier")
 
     # conditional edge (loop once if needed)

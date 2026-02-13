@@ -9,31 +9,25 @@ LOG_DIR.mkdir(exist_ok=True)
 
 
 def _safe_state_snapshot(state: Dict[str, Any]) -> Dict[str, Any]:
-    notes = state.get("notes", []) or []
 
     # store citations + score
-    notes_compact = []
-    for n in notes:
-        if isinstance(n, dict):
-            notes_compact.append(
-                {
-                    "citation": n.get("citation", {}),
-                    "score": n.get("score"),
-                }
-            )
+    notes = state.get("notes", []) or []
+    if not isinstance(notes, list):
+        notes = []
 
-        sources = []
-        for i, n in enumerate(notes, start=1):
-            if not isinstance(n, dict):
-                continue
-            c = n.get("citation", {}) or {}
-            sources.append({
-                "n": i,
-                "file": c.get("source_file", ""),
-                "page": c.get("page", ""),
-                "chunk": c.get("chunk_in_page", ""),
-                "score": n.get("score"),
-            })
+    # compact notes for logs
+    notes_compact = []
+
+    for i, n in enumerate(notes, start=1):
+        if not isinstance(n, dict):
+            continue
+
+        c = n.get("citation") or {}
+
+        notes_compact.append({
+            "citation": c,
+            "score": n.get("score"),
+        })
 
 
 
@@ -42,8 +36,7 @@ def _safe_state_snapshot(state: Dict[str, Any]) -> Dict[str, Any]:
         "task": state.get("task"),
         "retrieval_query": state.get("retrieval_query"),
         "final": state.get("final") or state.get("draft"),
-        "trace": state.get("trace", []) or [],
-        "sources": sources,        
+        "trace": state.get("trace", []) or [],      
         "notes": notes_compact,
         "retried": bool(state.get("retried", False)),
         "latency_ms": state.get("latency_ms"),

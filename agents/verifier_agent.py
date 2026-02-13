@@ -129,7 +129,9 @@ def run(state: AgentState) -> AgentState:
     )
 
     # Retry once if problems
-    if (missing_citation or not citations_ok) and not state.get("retried", False):
+    # if (missing_citation or not citations_ok) and not state.get("retried", False):
+    if (not citations_ok) and not state.get("retried", False):
+
         state["retried"] = True
         state["needs_retry"] = True
 

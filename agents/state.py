@@ -36,8 +36,10 @@ class AgentState(TypedDict, total=False):
     # logs
     trace: List[TraceEvent]
 
-    # --- ADDED ---
+    #early stopping
     stop: bool
+
+    latency_ms: float
 
 
 def add_trace(state: AgentState, agent: str, action: str, detail: str = "", meta=None) -> None:

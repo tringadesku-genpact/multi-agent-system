@@ -9,9 +9,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def _format_sources_for_context(notes):
-    """
-    This is the evidence block the model reads. It includes numbered snippets.
-    """
+    #evidence block with numbered snippets
     parts = []
     for i, n in enumerate(notes, start=1):
         c = n["citation"]
@@ -21,14 +19,12 @@ def _format_sources_for_context(notes):
 
 
 def _format_sources_list(notes):
-    """
-    This is the human-visible list appended to the draft so [1], [2]... have meaning.
-    """
     lines = ["### Sources"]
     for i, n in enumerate(notes, start=1):
         c = n["citation"]
-        lines.append(f"[{i}] {c['source_file']} | page {c['page']} | chunk {c['chunk_in_page']}")
+        lines.append(f"[{i}] {c['source_file']} (p. {c['page']}, chunk {c['chunk_in_page']})")
     return "\n".join(lines)
+
 
 
 def run(state: AgentState) -> AgentState:
@@ -60,7 +56,6 @@ def run(state: AgentState) -> AgentState:
         "- Do not invent facts.\n"
     )
 
-    # If planner gave sections, follow them; if not, produce a compact answer.
     if sections:
         section_list = "\n- " + "\n- ".join(sections)
         output_format = f"Use these sections:{section_list}"
@@ -87,7 +82,7 @@ def run(state: AgentState) -> AgentState:
     draft = (resp.choices[0].message.content or "").strip()
 
     # Append sources mapping
-    draft = draft + "\n\n" + _format_sources_list(notes)
+    # draft = draft + "\n\n" + _format_sources_list(notes)
 
     state["draft"] = draft
 

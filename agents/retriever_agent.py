@@ -8,6 +8,7 @@ def run(state: AgentState) -> AgentState:
 
     if not query:
         state["notes"] = []
+        state["sources"] = []
         add_trace(
             state,
             agent="retriever",
@@ -20,11 +21,21 @@ def run(state: AgentState) -> AgentState:
     notes = retrieve_notes(query=query, top_k=top_k)
     state["notes"] = notes
 
-    #compact source list
-    state["source_refs"] = [
-        f'{n["citation"]["source_file"]} | page {n["citation"]["page"]} | chunk {n["citation"]["chunk_in_page"]}'
-        for n in notes
-    ]
+    # structured sources
+    source_refs = []
+    for i, n in enumerate(notes, start=1):
+        c = n.get("citation", {})
+        source_refs.append(
+            {
+                "n": i,
+                "file": c.get("source_file", ""),
+                "page": c.get("page", ""),
+                "chunk": c.get("chunk_in_page", ""),
+                "score": round(float(n.get("score", 0.0)), 3) if n.get("score") is not None else None,
+            }
+        )
+
+    state["sources"] = source_refs
 
     add_trace(
         state,

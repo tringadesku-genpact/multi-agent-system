@@ -9,6 +9,8 @@ from agents.verifier_agent import run as verifier_run
 from agents.persistence import save_run
 from agents.guardrails_agent import run as guardrails_run
 
+import time
+
 
 def planner_node(state: AgentState) -> AgentState:
     return planner_run(state)
@@ -32,7 +34,6 @@ def guardrails_node(state: AgentState) -> AgentState:
 
 def _route_after_guardrails(state: AgentState):
     # If guardrails blocked the request, end immediately
-    # print("ROUTE AFTER GUARDRAILS stop=", state.get("stop"))
     return END if state.get("stop") else "planner"
 
 
@@ -76,7 +77,10 @@ def run(task: str, top_k: int = 5) -> AgentState:
     }
 
     add_trace(state, "system", "start", "Starting LangGraph run")
+    t0 = time.perf_counter()
     out = app.invoke(state)
+    latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+    out["latency_ms"] = latency_ms
     add_trace(out, "system", "end", "Finished LangGraph run")
     save_run(out)
     return out

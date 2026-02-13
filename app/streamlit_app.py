@@ -9,9 +9,10 @@ if ROOT_DIR not in sys.path:
 import pandas as pd
 import streamlit as st
 
+from dashboard import render_dashboard
 from agents.graph import run as run_graph
 
-st.set_page_config(page_title="Tringa's Multi-Agent RAG", page_icon="🛒", layout="wide")
+st.set_page_config(page_title="Tringa's Multi-Agent Chatbot", page_icon="🛒", layout="wide")
 
 st.markdown(
     """
@@ -39,7 +40,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("Multi-Agent RAG Demo")
+st.title("Multi-Agent System Demo")
 st.caption(
     "Ask questions about your documents. The system runs Guardrails → Planner → Retriever → Writer → Verifier "
     "(with optional retry) and logs each run."
@@ -80,7 +81,19 @@ with tab_chat:
 
             final = (state.get("final") or state.get("draft") or "").strip()
             trace = state.get("trace", []) or []
-            sources = state.get("source_refs", []) or []
+            notes = state.get("notes", []) or []
+
+            sources = []
+            for i, n in enumerate(notes, start=1):
+                c = (n or {}).get("citation", {}) if isinstance(n, dict) else {}
+                sources.append({
+                    "n": i,
+                    "file": c.get("source_file", ""),
+                    "page": c.get("page", ""),
+                    "chunk": c.get("chunk_in_page", ""),
+                    "score": n.get("score") if isinstance(n, dict) else None,
+                })
+
 
             blocked = any(
                 e.get("agent") == "guardrails" and e.get("action") == "blocked"
@@ -93,49 +106,31 @@ with tab_chat:
             else:
                 st.markdown(final)
 
-                if show_sources and sources:
-                    with st.expander("Sources"):
-                        for s in sources:
-                            st.markdown(f"- {s}")
-
-                if show_trace and trace:
-                    with st.expander("Trace"):
-                        for e in trace:
-                            st.markdown(
-                                f"- **{e.get('agent')}** :: {e.get('action')} :: {e.get('detail')}"
+                # ---- Sources (single, neat) ----
+                if show_sources:
+                    with st.expander(f"Sources ({len(sources)})"):
+                        if sources and isinstance(sources, list) and isinstance(sources[0], dict):
+                            cols = [c for c in ["n", "file", "page", "chunk", "score"] if c in sources[0]]
+                            st.dataframe(
+                                pd.DataFrame(sources)[cols],
+                                use_container_width=True,
+                                hide_index=True,
                             )
-                            if e.get("meta"):
-                                st.json(e["meta"])
+                        elif sources:
+                            for s in sources:
+                                st.markdown(f"- {s}")
+                        else:
+                            st.caption("No sources for this run.")
+
+                # ---- Trace (bring back) ----
+                if show_trace:
+                    with st.expander(f"Trace ({len(trace)})"):
+                        st.json(trace)
+
+
 
         st.session_state.messages.append({"role": "assistant", "content": final})
 
 # --- Dashboard tab ---
 with tab_dashboard:
-    st.subheader("Observability")
-    log_file = "logs/runs.jsonl"
-
-    if not os.path.exists(log_file):
-        st.info("No runs logged yet. Ask a few questions first.")
-    else:
-        rows = [json.loads(l) for l in open(log_file, "r", encoding="utf-8") if l.strip()]
-        df = pd.DataFrame(rows)
-
-        if "timestamp_utc" in df.columns:
-            df["timestamp_utc"] = pd.to_datetime(df["timestamp_utc"], errors="coerce")
-
-        st.dataframe(df, use_container_width=True)
-
-        st.metric("Total runs", len(df))
-        if "retried" in df.columns:
-            st.metric("Retry rate", f"{df['retried'].mean() * 100:.1f}%")
-
-        # Show blocked rate if present
-        if "trace" in df.columns:
-            def _is_blocked(t):
-                try:
-                    return any(e.get("agent") == "guardrails" and e.get("action") == "blocked" for e in t)
-                except Exception:
-                    return False
-            df["blocked"] = df["trace"].apply(_is_blocked)
-            st.metric("Blocked rate", f"{df['blocked'].mean() * 100:.1f}%")
-            st.bar_chart(df["blocked"])
+    render_dashboard(ROOT_DIR)

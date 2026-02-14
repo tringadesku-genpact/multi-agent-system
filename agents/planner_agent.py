@@ -150,6 +150,18 @@ def run(state: AgentState) -> AgentState:
     state["deliverable_sections"] = sections
 
 
+    if sections == ["Not found in the sources."]:
+      state["stop"] = True
+      state["final"] = "Not found in the sources."
+      add_trace(
+          state,
+          agent="planner",
+          action="stop",
+          detail="Non-business input detected; stopping before retrieval",
+          meta={"reason": "greeting_or_smalltalk"},
+      )
+      return state
+
     # ------------------------------------------------------------
     # 5) Trace logging
     # ------------------------------------------------------------

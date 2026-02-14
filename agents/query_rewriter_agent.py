@@ -44,13 +44,14 @@ def run(state: AgentState) -> AgentState:
         "Rewrite a better retrieval query."
     )
 
+    temp = 0 if os.getenv("EVAL_MODE") == "1" else 0.2
     resp = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        temperature=0.2,
+        temperature=temp,
     )
 
     new_query = (resp.choices[0].message.content or "").strip()

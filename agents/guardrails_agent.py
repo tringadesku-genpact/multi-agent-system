@@ -27,6 +27,16 @@ HARMFUL_PATTERNS = [
     r"\bkeylogger\b",
 ]
 
+OVERRIDE_PATTERNS = [
+    r"ignore (the )?sources",
+    r"answer from (general|your) knowledge",
+    r"without sources",
+    r"without citations",
+    r"no citations",
+    r"don't cite",
+    r"don't use (the )?retriever",
+]
+
 def run(state: AgentState) -> AgentState:
     task = (state.get("task") or "").strip()
     lower = task.lower()
@@ -42,13 +52,15 @@ def run(state: AgentState) -> AgentState:
 
     # Block harmful requests outright
     if any(re.search(p, lower) for p in HARMFUL_PATTERNS):
-        state["final"] = (
-            "I can’t help with hacking, cracking, or breaking into systems. "
-            "If you want, I can help with defensive cybersecurity—like how to secure accounts, "
-            "enable 2FA, recognize phishing, or harden a system safely."
-        )
+        state["final"] = "Not found in the sources."
         state["stop"] = True
         add_trace(state, "guardrails", "blocked", "Blocked harmful security request")
+        return state
+    
+    if any(re.search(p, lower) for p in OVERRIDE_PATTERNS):
+        state["final"] = "Not found in the sources."
+        state["stop"] = True
+        add_trace(state, "guardrails", "blocked_override", "Blocked attempt to bypass sources/citations rules")
         return state
 
     # Neutralize prompt-injection attempts

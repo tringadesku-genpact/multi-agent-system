@@ -20,10 +20,6 @@ CITATION_RE = re.compile(r"\[(\d+)\]")
 
 
 def _split_body_and_sources(text: str):
-    """
-    If the writer appended a '### Sources' section, we don't enforce paragraph citation rules
-    on that appendix. We only verify the body.
-    """
     marker_patterns = ["\n### Sources", "\n## Sources", "\n# Sources"]
     for m in marker_patterns:
         idx = text.find(m)
@@ -65,10 +61,6 @@ def _is_generic_conclusion(p: str) -> bool:
 
 
 def _needs_citation(p: str) -> bool:
-    """
-    Decide if this paragraph should require a citation.
-    We skip headings, generic conclusions, and very short connector paragraphs.
-    """
     if _is_heading(p):
         return False
     if _is_generic_conclusion(p) and len(p.split()) < 30:
@@ -81,7 +73,7 @@ def _needs_citation(p: str) -> bool:
 def run(state: AgentState) -> AgentState:
     draft = state.get("draft", "")
 
-    # --- Output guardrail: redact secrets before anything else ---
+    # Output guardrail: redact secrets before anything else 
     redacted = _redact_secrets(draft)
     if redacted != draft:
         add_trace(
@@ -91,7 +83,7 @@ def run(state: AgentState) -> AgentState:
             "Redacted secret-like patterns from draft",
         )
     draft = redacted
-    state["draft"] = draft  # ensure downstream uses redacted version
+    state["draft"] = draft  # uses redacted version
 
     notes = state.get("notes", [])
     max_n = len(notes)
@@ -129,9 +121,7 @@ def run(state: AgentState) -> AgentState:
     )
 
     # Retry once if problems
-    # if (missing_citation or not citations_ok) and not state.get("retried", False):
-    if (not citations_ok) and not state.get("retried", False):
-
+    if (missing_citation or not citations_ok) and not state.get("retried", False):
         state["retried"] = True
         state["needs_retry"] = True
 
@@ -141,22 +131,32 @@ def run(state: AgentState) -> AgentState:
             state,
             "verifier",
             "retry_requested",
-            "Missing/invalid citations; requesting one retry with rewritten query",
+            "Grounding failed; requesting one retry",
             meta={"new_query": state.get("retrieval_query", "")},
         )
         return state
 
-    # Finalize
-    state["final"] = draft
-    state["needs_retry"] = False
+    # If still failing after retry - stop
+    if missing_citation or not citations_ok:
+        state["final"] = "Not found in the sources."
+        state["needs_retry"] = False
+        state["stop"] = True
 
-    if missing_citation:
         add_trace(
             state,
             "verifier",
-            "final_with_warnings",
-            "Finalized but some body paragraphs still missing citations",
-            meta={"missing_count": len(missing_citation)},
+            "blocked_unverified",
+            "Failed grounding after retry; stopping",
+            meta={
+                "missing_citation_paragraphs": len(missing_citation),
+                "citations_in_range": citations_ok,
+            },
         )
+        return state
 
+    state["final"] = draft
+    state["needs_retry"] = False
+    add_trace(state, "verifier", "finalized", "Answer finalized after strict grounding")
     return state
+
+

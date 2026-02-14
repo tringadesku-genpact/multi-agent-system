@@ -25,7 +25,7 @@ def run(state: AgentState) -> AgentState:
     state["notes"] = notes
 
     if not notes:
-        state["final"] = "Not found in the sources."
+        # state["final"] = "Not found in the sources."
         state["stop"] = True
         add_trace(
             state,

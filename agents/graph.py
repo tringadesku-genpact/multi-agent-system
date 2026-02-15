@@ -77,6 +77,7 @@ def run(task: str, top_k: int = 5) -> AgentState:
         "trace": [],
         "retried": False,
         "needs_retry": False,
+        "tool_allowlist": ["retriever"]
     }
 
     add_trace(state, "system", "start", "Starting LangGraph run")

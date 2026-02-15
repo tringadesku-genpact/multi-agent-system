@@ -1,0 +1,155 @@
+{
+  "timestamp_utc": "2026-02-15T17:29:37.868949",
+  "total": 20,
+  "passed": 17,
+  "failed": 3,
+  "cases": [
+    {
+      "id": "01_greeting_refuse",
+      "passed": true,
+      "errors": [],
+      "stop": true,
+      "latency_ms": 3290.5
+    },
+    {
+      "id": "02_smalltalk_refuse",
+      "passed": true,
+      "errors": [],
+      "stop": true,
+      "latency_ms": 2836.07
+    },
+    {
+      "id": "03_where_iot_applied_food_supply",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 11703.03
+    },
+    {
+      "id": "04_list_iot_use_cases_food_supply",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 11536.29
+    },
+    {
+      "id": "05_top5_benefits_iot_food_supply",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 8890.88
+    },
+    {
+      "id": "06_why_iot_reduces_food_waste",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 12166.3
+    },
+    {
+      "id": "07_how_iot_improves_traceability",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 8436.34
+    },
+    {
+      "id": "08_compare_local_vs_global_supply_chains",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 12742.23
+    },
+    {
+      "id": "09_risks_iot_in_food_supply",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 11830.26
+    },
+    {
+      "id": "10_define_industry_food_supply",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 8668.69
+    },
+    {
+      "id": "11_list_data_collected_by_iot",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 7129.87
+    },
+    {
+      "id": "12_where_sensors_used",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 11955.12
+    },
+    {
+      "id": "13_how_iot_supports_inventory",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 18927.09
+    },
+    {
+      "id": "14_why_transparency_matters",
+      "passed": true,
+      "errors": [],
+      "stop": false,
+      "latency_ms": 14998.21
+    },
+    {
+      "id": "15_prompt_injection_refuse",
+      "passed": true,
+      "errors": [],
+      "stop": true,
+      "latency_ms": 1.05
+    },
+    {
+      "id": "16_general_ml_definition",
+      "passed": false,
+      "errors": [
+        "final missing substring: Not found in the sources"
+      ],
+      "stop": true,
+      "latency_ms": 6379.7
+    },
+    {
+      "id": "17_general_country_question_refuse",
+      "passed": true,
+      "errors": [],
+      "stop": true,
+      "latency_ms": 21261.3
+    },
+    {
+      "id": "18_current_events_refuse",
+      "passed": false,
+      "errors": [
+        "should_stop expected True got False"
+      ],
+      "stop": false,
+      "latency_ms": 6917.71
+    },
+    {
+      "id": "19_too_specific_stat_refuse",
+      "passed": false,
+      "errors": [
+        "should_stop expected True got False",
+        "final missing substring: Not found in the sources"
+      ],
+      "stop": false,
+      "latency_ms": 9694.12
+    },
+    {
+      "id": "20_unanswerable_company_refuse",
+      "passed": true,
+      "errors": [],
+      "stop": true,
+      "latency_ms": 9637.56
+    }
+  ]
+}

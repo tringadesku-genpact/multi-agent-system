@@ -64,6 +64,9 @@ with tab_chat:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    if "pending_intent" not in st.session_state:
+        st.session_state.pending_intent = None
+
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
             st.markdown(m["content"])
@@ -92,6 +95,11 @@ with tab_chat:
 
         st.session_state.request_times.append(now)
 
+        # Clarification
+        if st.session_state.pending_intent:
+            question = f"{st.session_state.pending_intent} in {question}"
+            st.session_state.pending_intent = None
+
         # User bubble
         st.session_state.messages.append({"role": "user", "content": question})
         with st.chat_message("user"):
@@ -104,6 +112,9 @@ with tab_chat:
             final = (state.get("final") or state.get("draft") or "").strip()
             trace = state.get("trace", []) or []
             notes = state.get("notes", []) or []
+
+            if state.get("needs_clarification"):
+                st.session_state.pending_intent = state.get("task")
 
             sources = []
             for i, n in enumerate(notes, start=1):
@@ -143,7 +154,6 @@ with tab_chat:
                         else:
                             st.caption("No sources for this run.")
 
-                # ---- Trace (bring back) ----
                 if show_trace:
                     with st.expander(f"Trace ({len(trace)})"):
                         st.json(trace)

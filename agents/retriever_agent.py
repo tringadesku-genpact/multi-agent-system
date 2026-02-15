@@ -34,6 +34,10 @@ def run(state: AgentState) -> AgentState:
             detail="No relevant sources after score threshold; stopping",
             meta={"query": query, "top_k": top_k, "min_score": MIN_SCORE},
         )
+        state["notes"] = []
+        state["final"] = "No supported answer could be found in the current document set. Please rephrase your request."
+        state["needs_retry"] = False
+        state["stop"] = True
         return state
 
 

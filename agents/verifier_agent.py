@@ -7,6 +7,7 @@ SECRET_PATTERNS = [
     r"sk-[A-Za-z0-9]{20,}",
 ]
 
+
 def _redact_secrets(text: str) -> str:
     if not text:
         return text
@@ -73,7 +74,7 @@ def _needs_citation(p: str) -> bool:
 def run(state: AgentState) -> AgentState:
     draft = state.get("draft", "")
 
-    # Output guardrail: redact secrets before anything else 
+    # Output guardrail: redact secrets before anything else
     redacted = _redact_secrets(draft)
     if redacted != draft:
         add_trace(
@@ -83,13 +84,13 @@ def run(state: AgentState) -> AgentState:
             "Redacted secret-like patterns from draft",
         )
     draft = redacted
-    state["draft"] = draft  # uses redacted version
+    state["draft"] = draft  # use redacted version going forward
 
     notes = state.get("notes", [])
     max_n = len(notes)
 
     if not draft.strip():
-        state["final"] = "Not found in the sources."
+        state["final"] = "No supported answer could be found in the current document set. Please rephrase your request."
         state["needs_retry"] = False
         add_trace(state, "verifier", "verify", "Empty draft; set final to not found")
         return state
@@ -120,7 +121,7 @@ def run(state: AgentState) -> AgentState:
         },
     )
 
-    # Retry once if problems
+    # Retry once if we have grounding/citation problems
     if (missing_citation or not citations_ok) and not state.get("retried", False):
         state["retried"] = True
         state["needs_retry"] = True
@@ -136,9 +137,10 @@ def run(state: AgentState) -> AgentState:
         )
         return state
 
-    # If still failing after retry - stop
-    if missing_citation or not citations_ok:
-        state["final"] = "Not found in the sources."
+    # --- Strict enforcement after retry ---
+    # Block if citations are invalid/out of range (hard failure)
+    if not citations_ok:
+        state["final"] = "No supported answer could be found in the current document set. Please rephrase your request."
         state["needs_retry"] = False
         state["stop"] = True
 
@@ -146,7 +148,25 @@ def run(state: AgentState) -> AgentState:
             state,
             "verifier",
             "blocked_unverified",
-            "Failed grounding after retry; stopping",
+            "Citations invalid/out of range after retry; stopping",
+            meta={
+                "missing_citation_paragraphs": len(missing_citation),
+                "citations_in_range": citations_ok,
+            },
+        )
+        return state
+
+    # Block only if too many paragraphs are ungrounded (hard failure)
+    if len(missing_citation) >= 2:
+        state["final"] = "No supported answer could be found in the current document set. Please rephrase your request."
+        state["needs_retry"] = False
+        state["stop"] = True
+
+        add_trace(
+            state,
+            "verifier",
+            "blocked_unverified",
+            "Too many ungrounded paragraphs after retry; stopping",
             meta={
                 "missing_citation_paragraphs": len(missing_citation),
                 "citations_in_range": citations_ok,
@@ -156,7 +176,16 @@ def run(state: AgentState) -> AgentState:
 
     state["final"] = draft
     state["needs_retry"] = False
-    add_trace(state, "verifier", "finalized", "Answer finalized after strict grounding")
+
+    if len(missing_citation) == 1:
+        add_trace(
+            state,
+            "verifier",
+            "finalized",
+            "Finalized with one minor uncited paragraph (citations valid/in range)",
+            meta={"missing_citation_paragraphs": 1},
+        )
+    else:
+        add_trace(state, "verifier", "finalized", "Answer finalized after strict grounding")
+
     return state
-
-

@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import time
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT_DIR not in sys.path:
@@ -69,7 +70,28 @@ with tab_chat:
 
     question = st.chat_input("Ask a question about your documents…")
 
+    # Simple rate limiting per session
+    if "request_times" not in st.session_state:
+        st.session_state.request_times = []
+
+    window_seconds = 60
+    max_requests = 10
+
     if question:
+        now = time.time()
+
+        # Keep only timestamps within the rolling window
+        st.session_state.request_times = [
+            t for t in st.session_state.request_times
+            if now - t < window_seconds
+        ]
+
+        if len(st.session_state.request_times) >= max_requests:
+            st.error(f"Rate limit exceeded. Try again in a moment (max {max_requests}/min).")
+            st.stop()
+
+        st.session_state.request_times.append(now)
+
         # User bubble
         st.session_state.messages.append({"role": "user", "content": question})
         with st.chat_message("user"):
@@ -93,7 +115,6 @@ with tab_chat:
                     "chunk": c.get("chunk_in_page", ""),
                     "score": n.get("score") if isinstance(n, dict) else None,
                 })
-
 
             blocked = any(
                 e.get("agent") == "guardrails" and e.get("action") == "blocked"
@@ -126,8 +147,6 @@ with tab_chat:
                 if show_trace:
                     with st.expander(f"Trace ({len(trace)})"):
                         st.json(trace)
-
-
 
         st.session_state.messages.append({"role": "assistant", "content": final})
 
